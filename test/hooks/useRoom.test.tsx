@@ -2,7 +2,7 @@
 
 import Daily, { DailyCall, DailyRoomInfo } from '@daily-co/daily-js';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import faker from 'faker';
+import { faker } from '@faker-js/faker';
 import React from 'react';
 
 import { DailyProvider } from '../../src/DailyProvider';
@@ -59,7 +59,7 @@ describe('useRoom', () => {
     const room: DailyRoomInfo = {
       config: {},
       domainConfig: {},
-      id: faker.datatype.uuid(),
+      id: faker.string.uuid(),
       name: faker.random.alphaNumeric(),
       tokenConfig: {},
     };

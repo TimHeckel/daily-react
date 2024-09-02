@@ -1,11 +1,11 @@
 import { DailyStreamingLayoutConfig } from '@daily-co/daily-js';
-import React, { useEffect } from 'react';
-import { atom, useRecoilCallback, useSetRecoilState } from 'recoil';
+import React, { useEffect, useCallback } from 'react';
+import { atom, useSetAtom } from 'jotai';
+import { useAtomCallback } from 'jotai/utils';
 
 import { useDailyEvent } from './hooks/useDailyEvent';
 import { useLocalSessionId } from './hooks/useLocalSessionId';
 import { useParticipantIds } from './hooks/useParticipantIds';
-import { RECOIL_PREFIX } from './lib/constants';
 
 interface RecordingState {
   /**
@@ -50,23 +50,21 @@ interface RecordingState {
 }
 
 export const recordingState = atom<RecordingState>({
-  key: RECOIL_PREFIX + 'recording',
-  default: {
-    isLocalParticipantRecorded: false,
-    isRecording: false,
-  },
+  isLocalParticipantRecorded: false,
+  isRecording: false,
 });
 
 export const DailyRecordings: React.FC<React.PropsWithChildren<unknown>> = ({
   children,
 }) => {
-  const setState = useSetRecoilState(recordingState);
+  const setState = useSetAtom(recordingState);
 
   const localSessionId = useLocalSessionId();
 
   const recordingParticipantIds = useParticipantIds({
     filter: 'record',
   });
+
   /**
    * Update recording state, whenever amount of recording participants changes.
    */
@@ -100,10 +98,10 @@ export const DailyRecordings: React.FC<React.PropsWithChildren<unknown>> = ({
 
   useDailyEvent(
     'recording-started',
-    useRecoilCallback(
-      ({ set }) =>
-        (ev) => {
-          let isLocalParticipantRecorded = true;
+    useAtomCallback(
+      useCallback(
+        (_get: any, set: any) => (ev: any) => {
+          let isLocalParticipantRecorded: boolean = true;
           switch (ev.type) {
             case 'cloud-beta':
             case 'cloud': {
@@ -129,47 +127,58 @@ export const DailyRecordings: React.FC<React.PropsWithChildren<unknown>> = ({
             type: ev?.type,
           });
         },
-      [localSessionId]
+        [localSessionId]
+      )
     )
   );
+
   useDailyEvent(
     'recording-stopped',
-    useRecoilCallback(
-      ({ set }) =>
-        () => {
+    useAtomCallback(
+      useCallback(
+        (_get, set) => () => {
           set(recordingState, (prevState) => ({
             ...prevState,
             isLocalParticipantRecorded: false,
             isRecording: false,
           }));
         },
-      []
+        []
+      )
     )
   );
+
   useDailyEvent(
     'recording-error',
-    useRecoilCallback(
-      ({ set }) =>
-        () => {
-          set(recordingState, (prevState) => ({
+    useAtomCallback(
+      useCallback(
+        (_get, set) => () => {
+          set(recordingState, (prevState: RecordingState) => ({
             ...prevState,
             error: true,
             isLocalParticipantRecorded: false,
             isRecording: false,
           }));
         },
-      []
+        []
+      )
     )
   );
+
   useDailyEvent(
     'left-meeting',
-    useRecoilCallback(
-      ({ reset }) =>
-        () => {
-          reset(recordingState);
+    useAtomCallback(
+      useCallback(
+        (_get, set) => () => {
+          set(recordingState, {
+            isLocalParticipantRecorded: false,
+            isRecording: false,
+          });
         },
-      []
+        []
+      )
     )
   );
+
   return <>{children}</>;
 };

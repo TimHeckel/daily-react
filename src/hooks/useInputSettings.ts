@@ -5,9 +5,9 @@ import {
   DailyInputSettings,
 } from '@daily-co/daily-js';
 import { useCallback, useDebugValue, useEffect } from 'react';
-import { atom, useRecoilCallback, useRecoilValue } from 'recoil';
+import { atom, useAtomValue } from 'jotai';
+import { useAtomCallback } from 'jotai/utils';
 
-import { RECOIL_PREFIX } from '../lib/constants';
 import { Reconstruct } from '../types/Reconstruct';
 import { useDaily } from './useDaily';
 import { useDailyError } from './useDailyError';
@@ -24,25 +24,23 @@ interface UseInputSettingsArgs {
   onInputSettingsUpdated?(ev: DailyEventObject<'input-settings-updated'>): void;
 }
 
-const inputSettingsState = atom<DailyInputSettings | null>({
-  key: RECOIL_PREFIX + 'input-settings',
-  default: null,
-});
+const inputSettingsState = atom<DailyInputSettings | null>(null);
 
 export const useInputSettings = ({
   onError,
   onInputSettingsUpdated,
 }: UseInputSettingsArgs = {}) => {
-  const inputSettings = useRecoilValue(inputSettingsState);
+  const inputSettings = useAtomValue(inputSettingsState);
   const { nonFatalError } = useDailyError();
   const daily = useDaily();
 
-  const updateInputSettingsState = useRecoilCallback(
-    ({ set }) =>
-      (inputSettings: DailyInputSettings) => {
+  const updateInputSettingsState = useAtomCallback(
+    useCallback(
+      (_get, set) => (inputSettings: DailyInputSettings) => {
         set(inputSettingsState, inputSettings);
       },
-    []
+      []
+    )
   );
 
   useEffect(() => {
@@ -57,7 +55,7 @@ export const useInputSettings = ({
     'input-settings-updated',
     useCallback(
       (ev) => {
-        updateInputSettingsState(ev.inputSettings);
+        updateInputSettingsState()(ev.inputSettings);
         onInputSettingsUpdated?.(ev);
       },
       [onInputSettingsUpdated, updateInputSettingsState]

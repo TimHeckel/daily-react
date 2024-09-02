@@ -4,7 +4,7 @@ import {
   DailyEventObjectAppMessage,
 } from '@daily-co/daily-js';
 import { useCallback, useDebugValue } from 'react';
-import { useRecoilValue } from 'recoil';
+import { useAtomValue } from 'jotai';
 
 import { Transcription, transcriptionState } from '../DailyTranscriptions';
 import { useDaily } from './useDaily';
@@ -30,7 +30,7 @@ export const useTranscription = ({
 }: UseTranscriptionArgs = {}) => {
   const daily = useDaily();
 
-  const state = useRecoilValue(transcriptionState);
+  const state = useAtomValue(transcriptionState);
 
   useDailyEvent(
     'transcription-started',

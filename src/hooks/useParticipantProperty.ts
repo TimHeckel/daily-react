@@ -1,8 +1,9 @@
 import { useDebugValue } from 'react';
-import { atomFamily, selectorFamily, useRecoilValue } from 'recoil';
+import { atom, useAtomValue } from 'jotai';
+import { equalAtomFamily } from '../lib/jotai-custom';
+import { atomFamily } from 'jotai/utils';
 
 import { ExtendedDailyParticipant } from '../DailyParticipants';
-import { RECOIL_PREFIX } from '../lib/constants';
 import type { NumericKeys } from '../types/NumericKeys';
 import type { Paths } from '../types/paths';
 import type { PathValue } from '../types/pathValue';
@@ -20,36 +21,34 @@ type PropertiesType = {
 /**
  * Stores all property paths for a given participant.
  */
-export const participantPropertyPathsState = atomFamily<
-  Paths<ExtendedDailyParticipant>[],
-  string
+export const participantPropertyPathsState = atomFamily(
+  (_id: string) => atom<Paths<ExtendedDailyParticipant>[]>([]),
+  (a, b) => a === b
+);
+
+/**
+ * Stores resolved values for each participant and property path.
+ */
+export const participantPropertyState = atomFamily(
+  (_id: PropertyType) => atom<any>(null),
+  (a, b) => a === b
+);
+
+/**
+ * Stores resolved values for each participant and property path.
+ */
+export const participantPropertiesState = equalAtomFamily<
+  any[],
+  PropertiesType
 >({
-  key: RECOIL_PREFIX + 'participant-property-paths',
-  default: [],
-});
-
-/**
- * Stores resolved values for each participant and property path.
- */
-export const participantPropertyState = atomFamily<any, PropertyType>({
-  key: RECOIL_PREFIX + 'participant-property',
-  default: null,
-  dangerouslyAllowMutability: true, // daily-js mutates track props (_managedByDaily, etc)
-});
-
-/**
- * Stores resolved values for each participant and property path.
- */
-export const participantPropertiesState = selectorFamily<any, PropertiesType>({
-  key: RECOIL_PREFIX + 'participant-properties',
+  equals: (a, b) => JSON.stringify(a) === JSON.stringify(b), // Use a custom equality function
   get:
     ({ id, properties }) =>
-    ({ get }) => {
+    (get) => {
       return properties.map((path) =>
         get(participantPropertyState({ id, property: path }))
       );
     },
-  dangerouslyAllowMutability: true, // daily-js mutates track props (_managedByDaily, etc)
 });
 
 type UseParticipantPropertyReturnType<
@@ -75,7 +74,7 @@ export const useParticipantProperty = <
   participantId: string,
   propertyPaths: P
 ): UseParticipantPropertyReturnType<T, P> => {
-  const properties = useRecoilValue(
+  const properties = useAtomValue(
     Array.isArray(propertyPaths)
       ? participantPropertiesState({
           id: participantId,

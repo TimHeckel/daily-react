@@ -1,5 +1,5 @@
 import { useCallback, useContext, useDebugValue } from 'react';
-import { useRecoilValue } from 'recoil';
+import { useAtomValue } from 'jotai';
 
 import {
   cameraDevicesState,
@@ -18,12 +18,12 @@ import { useDaily } from './useDaily';
 export const useDevices = () => {
   const daily = useDaily();
 
-  const camState = useRecoilValue(generalCameraState);
-  const micState = useRecoilValue(generalMicrophoneState);
-  const camDevices = useRecoilValue(cameraDevicesState);
-  const micDevices = useRecoilValue(microphoneDevicesState);
-  const speakerDevices = useRecoilValue(speakerDevicesState);
-  const cameraError = useRecoilValue(lastCameraErrorState);
+  const camState = useAtomValue(generalCameraState);
+  const micState = useAtomValue(generalMicrophoneState);
+  const camDevices = useAtomValue(cameraDevicesState);
+  const micDevices = useAtomValue(microphoneDevicesState);
+  const speakerDevices = useAtomValue(speakerDevicesState);
+  const cameraError = useAtomValue(lastCameraErrorState);
 
   const { refreshDevices } = useContext(DailyDevicesContext);
 
@@ -65,7 +65,7 @@ export const useDevices = () => {
     [daily]
   );
 
-  const errorStates: typeof camState[] = [
+  const errorStates: (typeof camState)[] = [
     'blocked',
     'in-use',
     'not-found',

@@ -1,4 +1,4 @@
-import faker from 'faker';
+import { faker } from '@faker-js/faker';
 import { DailyEventObject, DailyParticipant, DailyTrackState } from "@daily-co/daily-js";
 
 export const mockTrackState = (t: Partial<DailyTrackState> = {}): DailyTrackState => ({
@@ -8,7 +8,7 @@ export const mockTrackState = (t: Partial<DailyTrackState> = {}): DailyTrackStat
 });
 
 export const mockParticipant = (p: Partial<DailyParticipant> = {}): DailyParticipant => {
-  const session_id = p.session_id ?? faker.datatype.uuid();
+  const session_id = p.session_id ?? faker.string.uuid();
 
   return {
     audio: false,

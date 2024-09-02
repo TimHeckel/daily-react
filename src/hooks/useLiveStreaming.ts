@@ -4,7 +4,7 @@ import {
   DailyEventObjectNonFatalError,
 } from '@daily-co/daily-js';
 import { useCallback, useDebugValue } from 'react';
-import { useRecoilValue } from 'recoil';
+import { useAtomValue } from 'jotai';
 
 import { liveStreamingState } from '../DailyLiveStreaming';
 import { Reconstruct } from '../types/Reconstruct';
@@ -39,7 +39,7 @@ export const useLiveStreaming = ({
   onLiveStreamingWarning,
 }: UseLiveStreamingArgs = {}) => {
   const daily = useDaily();
-  const state = useRecoilValue(liveStreamingState);
+  const state = useAtomValue(liveStreamingState);
 
   useDailyEvent(
     'live-streaming-started',

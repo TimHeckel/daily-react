@@ -6,7 +6,7 @@ import Daily, {
   DailyEventObjectNoPayload,
 } from '@daily-co/daily-js';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import faker from 'faker';
+import { faker } from '@faker-js/faker';
 import React from 'react';
 
 import { DailyProvider } from '../../src/DailyProvider';
@@ -81,7 +81,7 @@ describe('useRoomExp', () => {
     it('should return correct ejectDate based on joining-meeting date', async () => {
       let localJoinDate: Date;
       (useRoom as jest.Mock).mockImplementation(() => ({
-        id: faker.datatype.uuid(),
+        id: faker.string.uuid(),
         name: faker.random.word(),
         domainConfig: {},
         tokenConfig: {},
@@ -119,7 +119,7 @@ describe('useRoomExp', () => {
     });
     it('should call onCountdown correctly during the countdown', () => {
       (useRoom as jest.Mock).mockImplementation(() => ({
-        id: faker.datatype.uuid(),
+        id: faker.string.uuid(),
         name: faker.random.word(),
         domainConfig: {},
         tokenConfig: {},
@@ -185,7 +185,7 @@ describe('useRoomExp', () => {
   describe('eject_at_room_exp', () => {
     it('should return correct ejectDate', async () => {
       (useRoom as jest.Mock).mockImplementation(() => ({
-        id: faker.datatype.uuid(),
+        id: faker.string.uuid(),
         name: faker.random.word(),
         domainConfig: {},
         tokenConfig: {},
@@ -213,7 +213,7 @@ describe('useRoomExp', () => {
       const exp = nowUnix + 60;
 
       (useRoom as jest.Mock).mockImplementation(() => ({
-        id: faker.datatype.uuid(),
+        id: faker.string.uuid(),
         name: faker.random.word(),
         domainConfig: {},
         tokenConfig: {},

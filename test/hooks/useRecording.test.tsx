@@ -11,7 +11,7 @@ import Daily, {
   DailyStreamingOptions,
 } from '@daily-co/daily-js';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import faker from 'faker';
+import { faker } from '@faker-js/faker';
 import React from 'react';
 
 import { DailyProvider } from '../../src/DailyProvider';
@@ -44,7 +44,7 @@ jest.mock('../../src/DailyRoom', () => ({
   )) as React.FC<React.PropsWithChildren>,
 }));
 
-const localId = faker.datatype.uuid();
+const localId = faker.string.uuid();
 
 jest.mock('../../src/hooks/useLocalSessionId', () => ({
   useLocalSessionId: () => localId,
@@ -84,8 +84,8 @@ describe('useRecording', () => {
         preset: 'default',
       },
       local: false,
-      recordingId: faker.datatype.uuid(),
-      startedBy: faker.datatype.uuid(),
+      recordingId: faker.string.uuid(),
+      startedBy: faker.string.uuid(),
       type: 'cloud-beta',
     });
 
@@ -230,7 +230,7 @@ describe('useRecording', () => {
         session_id: otherId,
       },
       local: false,
-      recordingId: faker.datatype.uuid(),
+      recordingId: faker.string.uuid(),
       startedBy: localId,
       type: 'cloud',
     });
@@ -245,7 +245,7 @@ describe('useRecording', () => {
   });
   it('returns as recording when any participant is running a local recording', async () => {
     const daily = Daily.createCallObject();
-    const otherId = faker.datatype.uuid();
+    const otherId = faker.string.uuid();
     (daily.participants as jest.Mock).mockImplementation(() => ({
       local: {
         local: true,
@@ -289,8 +289,8 @@ describe('useRecording', () => {
         preset: 'default',
       },
       local: false,
-      recordingId: faker.datatype.uuid(),
-      startedBy: faker.datatype.uuid(),
+      recordingId: faker.string.uuid(),
+      startedBy: faker.string.uuid(),
       type: 'cloud-beta',
     });
 

@@ -1,17 +1,13 @@
 import { DailyEventObject, DailyParticipantCounts } from '@daily-co/daily-js';
 import { useCallback, useDebugValue, useEffect } from 'react';
-import { atom, useRecoilCallback, useRecoilValue } from 'recoil';
-
-import { RECOIL_PREFIX } from '../lib/constants';
+import { atom, useAtomValue } from 'jotai';
+import { useAtomCallback } from 'jotai/utils';
 import { useDaily } from './useDaily';
 import { useDailyEvent } from './useDailyEvent';
 
 const participantCountsState = atom<DailyParticipantCounts>({
-  key: RECOIL_PREFIX + 'participant-counts',
-  default: {
-    hidden: 0,
-    present: 0,
-  },
+  hidden: 0,
+  present: 0,
 });
 
 interface Props {
@@ -27,21 +23,22 @@ export const useParticipantCounts = ({
   onParticipantCountsUpdated,
 }: Props = {}) => {
   const daily = useDaily();
-  const participantCounts = useRecoilValue(participantCountsState);
+  const participantCounts = useAtomValue(participantCountsState);
 
-  const updateCounts = useRecoilCallback(
-    ({ set }) =>
-      (counts: DailyParticipantCounts) => {
+  const updateCounts = useAtomCallback(
+    useCallback(
+      (_get, set) => (counts: DailyParticipantCounts) => {
         set(participantCountsState, counts);
       },
-    []
+      []
+    )
   );
 
   useDailyEvent(
     'participant-counts-updated',
     useCallback(
       (ev) => {
-        updateCounts(ev.participantCounts);
+        updateCounts()(ev.participantCounts);
         onParticipantCountsUpdated?.(ev);
       },
       [onParticipantCountsUpdated, updateCounts]
@@ -50,7 +47,7 @@ export const useParticipantCounts = ({
 
   useEffect(() => {
     if (!daily || daily.isDestroyed()) return;
-    updateCounts(daily.participantCounts());
+    updateCounts()(daily.participantCounts());
   }, [daily, updateCounts]);
 
   useDebugValue(participantCounts);

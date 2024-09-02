@@ -1,7 +1,8 @@
 import { DailyCpuLoadStats, DailyEventObject } from '@daily-co/daily-js';
 import deepEqual from 'fast-deep-equal';
 import { useCallback, useDebugValue, useEffect } from 'react';
-import { atom, useRecoilCallback, useRecoilValue } from 'recoil';
+import { atom, useAtomValue } from 'jotai';
+import { useAtomCallback } from 'jotai/utils';
 
 import { useDaily } from './useDaily';
 import { useDailyEvent } from './useDailyEvent';
@@ -13,11 +14,8 @@ interface CPULoad {
 }
 
 const CPULoadState = atom<CPULoad>({
-  key: 'cpu-load-state',
-  default: {
-    state: 'low',
-    reason: 'none',
-  },
+  state: 'low',
+  reason: 'none',
 });
 
 interface Props {
@@ -29,18 +27,19 @@ interface Props {
  * and [getCpuLoadStats](https://docs.daily.co/reference/daily-js/instance-methods/get-cpu-load-stats).
  */
 export const useCPULoad = ({ onCPULoadChange }: Props = {}) => {
-  const cpu = useRecoilValue(CPULoadState);
+  const cpu = useAtomValue(CPULoadState);
   const daily = useDaily();
   const meetingState = useMeetingState();
 
-  const updateCPULoadState = useRecoilCallback(
-    ({ set, snapshot }) =>
-      async (cpu: CPULoad) => {
-        const prev = await snapshot.getPromise(CPULoadState);
-        if (deepEqual(prev, cpu)) return;
-        set(CPULoadState, cpu);
+  const updateCPULoadState = useAtomCallback(
+    useCallback(
+      (get, set) => (cpu: CPULoad) => {
+        const prev = get(CPULoadState); // Get the current CPU load state
+        if (deepEqual(prev, cpu)) return; // Check if the previous state is equal to the current one
+        set(CPULoadState, cpu); // Update the state if different
       },
-    []
+      []
+    )
   );
 
   useEffect(() => {
@@ -49,7 +48,7 @@ export const useCPULoad = ({ onCPULoadChange }: Props = {}) => {
       return;
     daily.getCpuLoadStats().then((stats) => {
       if (!mounted) return;
-      updateCPULoadState({
+      updateCPULoadState()({
         state: stats.cpuLoadState,
         reason: stats.cpuLoadStateReason,
       });
@@ -63,7 +62,7 @@ export const useCPULoad = ({ onCPULoadChange }: Props = {}) => {
     'cpu-load-change',
     useCallback(
       (ev) => {
-        updateCPULoadState({
+        updateCPULoadState()({
           state: ev.cpuLoadState,
           reason: ev.cpuLoadStateReason,
         });

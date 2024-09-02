@@ -8,7 +8,7 @@ import Daily, {
   DailyParticipant,
 } from '@daily-co/daily-js';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import faker from 'faker';
+import { faker } from '@faker-js/faker';
 import React from 'react';
 
 import { StatefulDevice } from '../../src/DailyDevices';

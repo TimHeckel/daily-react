@@ -4,11 +4,10 @@ import {
   DailyTrackState,
 } from '@daily-co/daily-js';
 import { useCallback, useDebugValue } from 'react';
-import { useRecoilValue } from 'recoil';
+import { useAtomValue } from 'jotai';
 
-import { RECOIL_PREFIX } from '../lib/constants';
 import { customDeepEqual } from '../lib/customDeepEqual';
-import { equalSelector } from '../lib/recoil-custom';
+import { equalAtomFamily } from '../lib/jotai-custom';
 import { Reconstruct } from '../types/Reconstruct';
 import { useDaily } from './useDaily';
 import { useDailyEvent } from './useDailyEvent';
@@ -23,10 +22,9 @@ export interface ScreenShare {
   session_id: string;
 }
 
-const screenSharesState = equalSelector({
-  key: RECOIL_PREFIX + 'screen-shares',
+const screenSharesState = equalAtomFamily<ScreenShare[], void>({
   equals: customDeepEqual,
-  get: ({ get }) => {
+  get: () => (get) => {
     const screenIds = get(
       participantIdsFilteredAndSortedState({ filter: 'screen', sort: null })
     );
@@ -107,7 +105,7 @@ export const useScreenShare = ({
     )
   );
 
-  const screens = useRecoilValue(screenSharesState);
+  const screens = useAtomValue(screenSharesState(undefined));
 
   const result = {
     isSharingScreen: screens.some((s) => s.local),

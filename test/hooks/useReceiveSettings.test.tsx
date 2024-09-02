@@ -7,7 +7,7 @@ import Daily, {
   DailyReceiveSettings,
 } from '@daily-co/daily-js';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import faker from 'faker';
+import { faker } from '@faker-js/faker';
 import React from 'react';
 
 import { DailyProvider } from '../../src/DailyProvider';
@@ -56,8 +56,9 @@ const createWrapper =
   (
     callObject: DailyCall = Daily.createCallObject()
   ): React.FC<React.PropsWithChildren> =>
-  ({ children }) =>
-    <DailyProvider callObject={callObject}>{children}</DailyProvider>;
+  ({ children }) => (
+    <DailyProvider callObject={callObject}>{children}</DailyProvider>
+  );
 
 describe('useReceiveSettings', () => {
   beforeEach(() => {
@@ -110,6 +111,7 @@ describe('useReceiveSettings', () => {
     const { result } = renderHook(() => useReceiveSettings(), {
       wrapper: createWrapper(daily),
     });
+    // console.log('result first is', result);
     const action: DailyEvent = 'receive-settings-updated';
     const payload: DailyEventObjectReceiveSettingsUpdated = mockEvent({
       action: 'receive-settings-updated',
@@ -127,8 +129,10 @@ describe('useReceiveSettings', () => {
     act(() => {
       // @ts-ignore
       daily.emit(action, payload);
+      // console.log('emit finished', action, payload);
     });
     await waitFor(() => {
+      // console.log('waitFor finished', result, payload.receiveSettings.base);
       expect(result.current.receiveSettings).toEqual(
         payload.receiveSettings.base
       );
@@ -136,7 +140,7 @@ describe('useReceiveSettings', () => {
   });
   it('receive-settings-updated event updates returned receiveSettings (id)', async () => {
     const daily = Daily.createCallObject();
-    const id = faker.datatype.uuid();
+    const id = faker.string.uuid();
     const { result } = renderHook(() => useReceiveSettings({ id }), {
       wrapper: createWrapper(daily),
     });
@@ -171,7 +175,7 @@ describe('useReceiveSettings', () => {
   });
   it('returns baseSettings in case id is not set', async () => {
     const daily = Daily.createCallObject();
-    const id = faker.datatype.uuid();
+    const id = faker.string.uuid();
     const { result } = renderHook(() => useReceiveSettings({ id }), {
       wrapper: createWrapper(daily),
     });

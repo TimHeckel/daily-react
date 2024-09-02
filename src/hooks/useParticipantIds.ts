@@ -1,15 +1,16 @@
-import { DailyEventObject } from '@daily-co/daily-js';
+import { useAtomValue } from 'jotai';
+import { useAtomCallback } from 'jotai/utils';
 import { useCallback, useDebugValue, useEffect, useState } from 'react';
-import { Snapshot, useRecoilCallback, useRecoilValue } from 'recoil';
+import { DailyEventObject } from '@daily-co/daily-js';
 
 import {
   ExtendedDailyParticipant,
   participantIdsState,
   participantState,
 } from '../DailyParticipants';
-import { RECOIL_PREFIX } from '../lib/constants';
 import { customDeepEqual } from '../lib/customDeepEqual';
-import { equalSelectorFamily } from '../lib/recoil-custom';
+import { Atom } from 'jotai';
+import { equalAtomFamily } from '../lib/jotai-custom';
 import { isTrackOff } from '../utils/isTrackOff';
 import {
   participantPropertiesState,
@@ -46,25 +47,21 @@ type SortParticipants = SerializableSortParticipants | SortParticipantsFunction;
 /**
  * Short-cut state selector for useParticipantIds({ filter: 'local' })
  */
-export const participantIdsFilteredAndSortedState = equalSelectorFamily<
+export const participantIdsFilteredAndSortedState = equalAtomFamily<
   string[],
   {
     filter: SerializableFilterParticipants | null;
     sort: SerializableSortParticipants | null;
   }
 >({
-  key: RECOIL_PREFIX + 'participant-ids-filtered-sorted',
   equals: customDeepEqual,
   get:
     ({ filter, sort }) =>
-    ({ get }) => {
+    (get) => {
       const ids = get(participantIdsState);
       return ids
         .filter((id) => {
           switch (filter) {
-            /**
-             * Simple boolean fields first.
-             */
             case 'local':
             case 'owner':
             case 'record': {
@@ -141,68 +138,70 @@ export const useParticipantIds = ({
 }: UseParticipantIdsArgs = {}) => {
   /**
    * For instances of useParticipantIds with string-based filter and sort,
-   * we can immediately return the correct ids from Recoil's state.
+   * we can immediately return the correct ids from Jotai's state.
    */
-  const preFilteredSortedIds = useRecoilValue(
+  const preFilteredSortedIds = useAtomValue(
     participantIdsFilteredAndSortedState({
       filter: typeof filter === 'string' ? filter : null,
       sort: typeof sort === 'string' ? sort : null,
     })
   );
 
+  // Define types for filter and sort functions
+  type FilterFunction = (participant: ExtendedDailyParticipant) => boolean;
+  type SortFunction = (
+    a: ExtendedDailyParticipant,
+    b: ExtendedDailyParticipant
+  ) => number;
+
+  // Define the type for the get function
+  type GetFunction = <T>(atom: Atom<T>) => T;
+
   const shouldUseCustomIds =
     typeof filter === 'function' || typeof sort === 'function';
 
   const getCustomFilteredIds = useCallback(
-    (snapshot: Snapshot) => {
-      if (
-        // Ignore if both filter and sort are not functions.
-        typeof filter !== 'function' &&
-        typeof sort !== 'function'
-      )
-        return [];
+    (get: GetFunction) => {
+      if (typeof filter !== 'function' && typeof sort !== 'function') return [];
 
-      const participants: ExtendedDailyParticipant[] = preFilteredSortedIds.map(
-        (id) =>
-          snapshot.getLoadable(participantState(id))
-            .contents as ExtendedDailyParticipant
-      );
+      const participants: (ExtendedDailyParticipant | null)[] =
+        preFilteredSortedIds.map((id) => get(participantState(id)));
 
-      return (
-        participants
-          // Make sure we don't accidentally try to filter/sort `null` participants
-          // This can happen when a participant's id is already present in store
-          // but the participant object is not stored, yet.
-          .filter(Boolean)
-          // Run custom filter, if it's a function. Otherwise don't filter any participants.
-          .filter(typeof filter === 'function' ? filter : () => true)
-          // Run custom sort, if it's a function. Otherwise don't sort.
-          .sort(typeof sort === 'function' ? sort : () => 0)
-          // Map back to session_id.
-          .map((p) => p.session_id)
-          // Filter any potential null/undefined ids.
-          // This shouldn't really happen, but better safe than sorry.
-          .filter(Boolean)
-      );
+      return participants
+        .filter(
+          (participant): participant is ExtendedDailyParticipant =>
+            participant !== null
+        )
+        .filter((participant: ExtendedDailyParticipant) =>
+          typeof filter === 'function'
+            ? (filter as FilterFunction)(participant)
+            : true
+        )
+        .sort((a: ExtendedDailyParticipant, b: ExtendedDailyParticipant) =>
+          typeof sort === 'function' ? (sort as SortFunction)(a, b) : 0
+        )
+        .map((p) => p.session_id)
+        .filter((id): id is string => id !== null && id !== undefined);
     },
-    [filter, preFilteredSortedIds, sort]
+    [filter, preFilteredSortedIds, sort] as const
   );
 
   const [customIds, setCustomIds] = useState<string[]>([]);
 
-  const maybeUpdateCustomIds = useRecoilCallback(
-    ({ snapshot }) =>
-      () => {
+  const maybeUpdateCustomIds = useAtomCallback(
+    useCallback(
+      (get) => () => {
         if (!shouldUseCustomIds) return;
-        const newIds = getCustomFilteredIds(snapshot);
+        const newIds = getCustomFilteredIds(get);
         if (customDeepEqual(newIds, customIds)) return;
         setCustomIds(newIds);
       },
-    [customIds, getCustomFilteredIds, shouldUseCustomIds]
+      [customIds, getCustomFilteredIds, shouldUseCustomIds]
+    )
   );
 
   useEffect(() => {
-    maybeUpdateCustomIds();
+    maybeUpdateCustomIds()();
   }, [maybeUpdateCustomIds]);
 
   useThrottledDailyEvent(
@@ -231,7 +230,7 @@ export const useParticipantIds = ({
               break;
           }
         });
-        maybeUpdateCustomIds();
+        maybeUpdateCustomIds()();
       },
       [
         maybeUpdateCustomIds,

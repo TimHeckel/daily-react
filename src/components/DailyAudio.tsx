@@ -6,7 +6,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { useRecoilCallback } from 'recoil';
+import { useAtomCallback } from 'jotai/utils';
 
 import { ExtendedDailyParticipant } from '../DailyParticipants';
 import { useActiveSpeakerId } from '../hooks/useActiveSpeakerId';
@@ -20,53 +20,19 @@ import { isTrackOff } from '../utils/isTrackOff';
 import { DailyAudioPlayException, DailyAudioTrack } from './DailyAudioTrack';
 
 interface Props {
-  /**
-   * When enabled and the call is configured for manual track subscriptions,
-   * DailyAudio will automatically subscribe to the active speaker's audio track.
-   */
   autoSubscribeActiveSpeaker?: boolean;
-  /**
-   * Maximum amount of parallel speakers. Default: 5.
-   */
   maxSpeakers?: number;
-  /**
-   * Callback to handle failed attempt to play audio.
-   */
   onPlayFailed?(e: DailyAudioPlayException): void;
-  /**
-   * When enabled, plays audio from a local screenAudio track.
-   */
   playLocalScreenAudio?: boolean;
 }
 
 export interface DailyAudioHandle {
-  /**
-   * Returns all rendered audio elements.
-   */
   getAllAudio(): HTMLAudioElement[];
-  /**
-   * Returns the audio element assigned to the current active speaker.
-   */
   getActiveSpeakerAudio(): HTMLAudioElement | null;
-  /**
-   * Returns all rendered audio elements for rmpAudio tracks.
-   */
   getRmpAudio(): HTMLAudioElement[];
-  /**
-   * Returns all rendered audio elements for screenAudio tracks.
-   */
   getScreenAudio(): HTMLAudioElement[];
-  /**
-   * Returns the audio track for the given sessionId.
-   */
   getAudioBySessionId(sessionId: string): HTMLAudioElement | null;
-  /**
-   * Returns the rmpAudio track for the given sessionId.
-   */
   getRmpAudioBySessionId(sessionId: string): HTMLAudioElement | null;
-  /**
-   * Returns the screenAudio track for the given sessionId.
-   */
   getScreenAudioBySessionId(sessionId: string): HTMLAudioElement | null;
 }
 
@@ -146,12 +112,9 @@ export const DailyAudio = memo(
         [activeSpeakerId]
       );
 
-      const assignSpeaker = useRecoilCallback(
-        ({ snapshot }) =>
-          async (sessionId: string) => {
-            /**
-             * Only consider remote participants with subscribed or staged audio.
-             */
+      const assignSpeaker = useAtomCallback(
+        useCallback(
+          async (get, _set, sessionId: string) => {
             const subscribedParticipants = Object.values(
               daily?.participants() ?? {}
             ).filter((p) => !p.local && Boolean(p.tracks.audio.subscribed));
@@ -177,10 +140,8 @@ export const DailyAudio = memo(
             }
 
             setSpeakers((prevSpeakers) => {
-              // New speaker is already present
               if (prevSpeakers.includes(sessionId)) return prevSpeakers;
 
-              // Try to find a free slot: either unassigned or unsubscribed
               const freeSlotCheck = (id: string) => !id || !isSubscribed(id);
               if (prevSpeakers.some(freeSlotCheck)) {
                 const idx = prevSpeakers.findIndex(freeSlotCheck);
@@ -188,9 +149,6 @@ export const DailyAudio = memo(
                 return [...prevSpeakers];
               }
 
-              // From here on we can assume that all assigned audio tracks are subscribed.
-
-              // Try to find muted recent speaker
               const mutedIdx = prevSpeakers.findIndex((id) =>
                 subscribedParticipants.some(
                   (p) => p.session_id === id && isTrackOff(p.tracks.audio.state)
@@ -201,38 +159,33 @@ export const DailyAudio = memo(
                 return [...prevSpeakers];
               }
 
-              // Find least recent non-active speaker and replace with new speaker
               const speakerObjects = subscribedParticipants
                 .filter(
                   (p) =>
-                    // Only consider participants currently assigned to speaker slots
                     prevSpeakers.includes(p.session_id) &&
-                    // Don't replace current active participant, to avoid audio drop-outs
                     p.session_id !== activeSpeakerId
                 )
                 .sort((a, b) => {
                   const lastActiveA =
-                    snapshot.getLoadable(
+                    get(
                       participantPropertyState({
                         id: a.session_id,
                         property: 'last_active',
                       })
-                    ).contents ?? new Date('1970-01-01');
+                    ) ?? new Date('1970-01-01');
                   const lastActiveB =
-                    snapshot.getLoadable(
+                    get(
                       participantPropertyState({
                         id: b.session_id,
                         property: 'last_active',
                       })
-                    ).contents ?? new Date('1970-01-01');
+                    ) ?? new Date('1970-01-01');
                   if (lastActiveA > lastActiveB) return 1;
                   if (lastActiveA < lastActiveB) return -1;
                   return 0;
                 });
 
-              // No previous speaker in call anymore. Assign first free slot.
               if (!speakerObjects.length) {
-                // Don't replace the active speaker. Instead find first non-active speaker slot.
                 const replaceIdx = prevSpeakers.findIndex(
                   (id) => id !== activeSpeakerId
                 );
@@ -240,7 +193,6 @@ export const DailyAudio = memo(
                 return [...prevSpeakers];
               }
 
-              // Replace least recent speaker with new speaker
               const replaceIdx = prevSpeakers.indexOf(
                 speakerObjects[0]?.session_id
               );
@@ -248,12 +200,10 @@ export const DailyAudio = memo(
               return [...prevSpeakers];
             });
           },
-        [activeSpeakerId, autoSubscribeActiveSpeaker, daily]
+          [activeSpeakerId, autoSubscribeActiveSpeaker, daily]
+        )
       );
 
-      /**
-       * Unassigns speaker from speaker slot, e.g. because participant left the call.
-       */
       const removeSpeaker = useCallback((sessionId: string) => {
         setSpeakers((prevSpeakers) => {
           if (!prevSpeakers.includes(sessionId)) return prevSpeakers;

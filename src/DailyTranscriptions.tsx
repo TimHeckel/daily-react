@@ -2,11 +2,11 @@ import {
   DailyEventObjectAppMessage,
   DailyTranscriptionDeepgramOptions,
 } from '@daily-co/daily-js';
-import React from 'react';
-import { atom, useRecoilCallback } from 'recoil';
+import React, { useCallback } from 'react';
+import { atom } from 'jotai';
+import { useAtomCallback } from 'jotai/utils';
 
 import { useDailyEvent } from './hooks/useDailyEvent';
-import { RECOIL_PREFIX } from './lib/constants';
 
 export interface Transcription {
   session_id: string;
@@ -46,13 +46,10 @@ interface TranscriptionState extends DailyTranscriptionDeepgramOptions {
 }
 
 export const transcriptionState = atom<TranscriptionState>({
-  key: RECOIL_PREFIX + 'transcription',
-  default: {
-    isTranscribing: false,
-    model: 'general',
-    language: 'en',
-    transcriptions: [],
-  },
+  isTranscribing: false,
+  model: 'general',
+  language: 'en',
+  transcriptions: [],
 });
 
 export const DailyTranscriptions: React.FC<React.PropsWithChildren<{}>> = ({
@@ -60,66 +57,72 @@ export const DailyTranscriptions: React.FC<React.PropsWithChildren<{}>> = ({
 }) => {
   useDailyEvent(
     'transcription-started',
-    useRecoilCallback(
-      ({ set }) =>
-        (ev) => {
+    useAtomCallback(
+      useCallback(
+        (_get, set) => (ev: TranscriptionState) => {
           set(transcriptionState, {
             error: false,
-            isTranscribing: true,
             transcriptionStartDate: new Date(),
-            transcriptions: [],
-            ...ev,
+            ...(ev as TranscriptionState),
           });
         },
-      []
+        []
+      )
     )
   );
+
   useDailyEvent(
     'transcription-stopped',
-    useRecoilCallback(
-      ({ set }) =>
-        (ev) => {
-          set(transcriptionState, (prevState) => ({
+    useAtomCallback(
+      useCallback(
+        (_get, set) => (ev: TranscriptionState) => {
+          set(transcriptionState, (prevState: TranscriptionState) => ({
             ...prevState,
             updatedBy: ev?.updatedBy,
             isTranscribing: false,
           }));
         },
-      []
+        []
+      )
     )
   );
+
   useDailyEvent(
     'transcription-error',
-    useRecoilCallback(
-      ({ set }) =>
-        () => {
+    useAtomCallback(
+      useCallback(
+        (_get, set) => () => {
           set(transcriptionState, (prevState) => ({
             ...prevState,
             error: true,
             isTranscribing: false,
           }));
         },
-      []
+        []
+      )
     )
   );
+
   useDailyEvent(
     'left-meeting',
-    useRecoilCallback(
-      ({ set }) =>
-        () => {
+    useAtomCallback(
+      useCallback(
+        (_get, set) => () => {
           set(transcriptionState, (prevState) => ({
             ...prevState,
             isTranscribing: false,
           }));
         },
-      []
+        []
+      )
     )
   );
+
   useDailyEvent(
     'app-message',
-    useRecoilCallback(
-      ({ set }) =>
-        (ev: DailyEventObjectAppMessage<Transcription>) => {
+    useAtomCallback(
+      useCallback(
+        (_get, set) => (ev: DailyEventObjectAppMessage<Transcription>) => {
           if (ev?.fromId === 'transcription') {
             set(transcriptionState, (prevState) => ({
               ...prevState,
@@ -131,7 +134,8 @@ export const DailyTranscriptions: React.FC<React.PropsWithChildren<{}>> = ({
             }));
           }
         },
-      []
+        []
+      )
     )
   );
 
